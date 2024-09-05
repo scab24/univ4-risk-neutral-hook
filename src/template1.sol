@@ -45,24 +45,24 @@ contract DeltaGammaHedgingHook is BaseHook {
         });
     }
 
-function beforeSwap(
-    address sender,
-    PoolKey calldata key,
-    IPoolManager.SwapParams calldata params,
-    bytes calldata hookData
-) external override returns (bytes4, BeforeSwapDelta, uint24) {
-    PoolId poolId = key.toId();
-    if (isLargeSwap(params)) {
-        (int128 deltaAdjustment, int128 liquidityDelta) = adjustLiquidityForDeltaGammaHedge(key, params);
-        BeforeSwapDelta beforeSwapDelta = toBeforeSwapDelta(deltaAdjustment, liquidityDelta);
-        return (BaseHook.beforeSwap.selector, beforeSwapDelta, 0);
-    } else {
-        
-        int256 deltaImpact = int256(params.amountSpecified) / 10;
-        deltas[poolId] += deltaImpact;
+    function beforeSwap(
+        address sender,
+        PoolKey calldata key,
+        IPoolManager.SwapParams calldata params,
+        bytes calldata hookData
+    ) external override returns (bytes4, BeforeSwapDelta, uint24) {
+        PoolId poolId = key.toId();
+        if (isLargeSwap(params)) {
+            (int128 deltaAdjustment, int128 liquidityDelta) = adjustLiquidityForDeltaGammaHedge(key, params);
+            BeforeSwapDelta beforeSwapDelta = toBeforeSwapDelta(deltaAdjustment, liquidityDelta);
+            return (BaseHook.beforeSwap.selector, beforeSwapDelta, 0);
+        } else {
+            
+            int256 deltaImpact = int256(params.amountSpecified) / 10;
+            deltas[poolId] += deltaImpact;
+        }
+        return (BaseHook.beforeSwap.selector, toBeforeSwapDelta(0, 0), 0);
     }
-    return (BaseHook.beforeSwap.selector, toBeforeSwapDelta(0, 0), 0);
-}
 
     function isLargeSwap(IPoolManager.SwapParams calldata params) internal pure returns (bool) {
         return params.amountSpecified > 1000000;
