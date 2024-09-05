@@ -10,7 +10,7 @@ import {CurrencyLibrary, Currency} from "v4-core/types/Currency.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/types/PoolId.sol";
 import {Hooks} from "v4-core/libraries/Hooks.sol";
 import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
-import {DeltaGammaHedgingHook} from "../src/DeltaGammaHedgingHook.sol";
+import {template1} from "../src/template1.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 
 
@@ -23,7 +23,7 @@ contract DeltaGammaHedgingHookTest is Test, Deployers {
     using CurrencyLibrary for Currency;
     using PoolIdLibrary for PoolKey;
 
-    DeltaGammaHedgingHook hook;
+    template1 hook;
 
 function setUp() public {
     // Desplegar contratos core de v4
@@ -40,8 +40,8 @@ function setUp() public {
     address hookAddress = address(flags);
 
     // Desplegar hook
-    deployCodeTo("DeltaGammaHedgingHook.sol", abi.encode(manager), hookAddress);
-    hook = DeltaGammaHedgingHook(hookAddress);
+    deployCodeTo("template1.sol", abi.encode(manager), hookAddress);
+    hook = template1(hookAddress);
 
     // Inicializar un pool
     (key, ) = initPool(
