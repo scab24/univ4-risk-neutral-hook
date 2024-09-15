@@ -2,6 +2,7 @@
 @openzeppelin/=lib/v4-periphery/lib/v4-core/lib/openzeppelin-contracts/
 @openzeppelin/contracts/=lib/v4-periphery/lib/v4-core/lib/openzeppelin-contracts/contracts/
 @uniswap/v4-core/=lib/v4-periphery/lib/v4-core/
+chainlink-brownie-contracts/=lib/chainlink-brownie-contracts/contracts/src/v0.6/vendor/@arbitrum/nitro-contracts/src/
 ds-test/=lib/v4-periphery/lib/v4-core/lib/forge-std/lib/ds-test/src/
 erc4626-tests/=lib/v4-periphery/lib/v4-core/lib/openzeppelin-contracts/lib/erc4626-tests/
 forge-gas-snapshot/=lib/v4-periphery/lib/v4-core/lib/forge-gas-snapshot/src/
