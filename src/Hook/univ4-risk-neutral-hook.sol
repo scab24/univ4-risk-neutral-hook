@@ -22,8 +22,8 @@ import {VolatilityCalculator} from "../Math/implied volatility_solidity.sol";
 
 /**
  * @title univ4-risk-neutral-hook
- * @notice Uniswap v4 Hook to dynamically adjust fees based on gas price and market data.
- *         Utilizes an Exponential Moving Average (EMA) for gas price and Chainlink oracles to obtain volatility, liquidity, and volume data.
+ * @notice LVR & IL Hedge Hook: Dynamic Fees for pools and Power Perps / Borrwing hedges for LPs. 
+            Towards a risk neutral DeFi.
  */
 contract univ4riskneutralhook is BaseHook, Ownable {
     using LPFeeLibrary for uint24; // Library to handle liquidity fees
