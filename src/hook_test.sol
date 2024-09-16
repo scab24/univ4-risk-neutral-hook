@@ -15,6 +15,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 // Importaciones de Chainlink para obtener datos externos
 import "lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "abdk-libraries-solidity/ABDKMath64x64.sol";
 /**
  * @title GasPriceFeesHook
  * @notice Hook de Uniswap v4 para ajustar dinámicamente las tarifas basadas en el precio del gas y datos de mercado.
@@ -22,6 +23,8 @@ import "lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/Aggregator
  */
 contract GasPriceFeesHook is BaseHook, Ownable {
     using LPFeeLibrary for uint24; // Biblioteca para manejar tarifas de liquidez
+    using ABDKMath64x64 for int128;
+    using ABDKMath64x64 for uint256;
 
     /**
      * @notice Estructura para almacenar datos de mercado obtenidos de oráculos
@@ -535,12 +538,12 @@ function fetchMarketData(address poolAddress) internal view returns (MarketData 
     (, int price, , ,) = priceFeed.latestRoundData();
     // No es necesario convertir price, ya es int
 
-    //@audit TODO
+    //@audit TODO - => gamma
     // Obtener liquidez desde el oráculo de liquidez de Chainlink
     (, int256 liquidityPrice, , uint256 liquidityUpdatedAt, ) = liquidityOracle.latestRoundData();
     uint256 liquidity = uint256(liquidityPrice); // Supuesto: liquidez en tokens (con decimal 18)
 
-    //@audit TODO
+    //@audit TODO => 
     // Obtener volumen desde el oráculo de volumen de Chainlink
     (, int256 volumePrice, , uint256 volumeUpdatedAt, ) = volumeOracle.latestRoundData();
     uint256 volume = uint256(volumePrice); // Supuesto: volumen en tokens (con decimal 18)
@@ -554,4 +557,124 @@ function fetchMarketData(address poolAddress) internal view returns (MarketData 
         lastUpdateTimestamp: block.timestamp
     });
 }
+
+
+////////////////////
+// MATH
+////////////////////
+
+
+    /**
+    * Fórmula de la volatilidad implícita:
+    * 
+    * sigma = sqrt((8 / t) * (mu_pool * t - ln(cosh((u * t) / 2))))
+    * 
+    * Donde:
+    * sigma    : Volatilidad implícita
+    * t        : Tiempo (ej. 1 año)
+    * mu_pool  : Retorno medio en fees de la pool durante el tiempo t
+    * u        : Drift del activo subyacente
+    * ln       : Logaritmo natural
+    * cosh     : Coseno hiperbólico
+    */
+
+/**
+ * @notice Calcula la volatilidad implícita utilizando la fórmula σ = √(8/t * [μ_pool*t - ln(cosh(u*t/2))]).
+ * @param muPool Retorno medio en fees de la pool durante el tiempo t (μ_pool).
+ * @param u Drift del activo subyacente (u).
+ * @param t Tiempo en años (t).
+ * @return sigma Volatilidad implícita en formato 64.64 fija.
+ */
+function calculateImpliedVolatility(uint256 muPool, uint256 u, uint256 t) public pure returns (int128) {
+    require(t > 0, "Tiempo t debe ser mayor que cero");
+
+    // Convertir uint256 a 64.64 fija
+    int128 fixedMuPool = ABDKMath64x64.fromUInt(muPool);
+    int128 fixedU = ABDKMath64x64.fromUInt(u);
+    int128 fixedT = ABDKMath64x64.fromUInt(t);
+
+    // Paso 1: Calcular μ_pool * t
+    int128 muPoolTimesT = ABDKMath64x64.mul(fixedMuPool, fixedT);
+
+    // Paso 2: Calcular u * t / 2
+    int128 ut = ABDKMath64x64.mul(fixedU, fixedT);
+    int128 utOver2 = ABDKMath64x64.div(ut, ABDKMath64x64.fromUInt(2));
+
+    // Paso 2: Calcular cosh(u * t / 2)
+    int128 coshUtOver2 = cosh(utOver2);
+
+    // Paso 3: Calcular ln(cosh(u * t / 2))
+    int128 lnCoshUtOver2 = naturalLog(coshUtOver2);
+
+    // Paso 4: Calcular [μ_pool * t - ln(cosh(u * t / 2))]
+    int128 innerExpression = ABDKMath64x64.sub(muPoolTimesT, lnCoshUtOver2);
+
+    // Paso 5: Calcular 8 / t
+    int128 eightOverT = ABDKMath64x64.div(ABDKMath64x64.fromUInt(8), fixedT);
+
+    // Paso 5: Multiplicar 8/t * [μ_pool * t - ln(cosh(u * t / 2))]
+    int128 multiplicand = ABDKMath64x64.mul(eightOverT, innerExpression);
+
+    // Paso 6: Calcular la raíz cuadrada de multiplicand
+    int128 sigma = sqrt(multiplicand);
+
+    return sigma;
+}
+
+    /**
+    * Función coseno hiperbólico:
+    * 
+    * cosh(x) = (e^x + e^(-x)) / 2
+    * 
+    * Donde:
+    * e : Base del logaritmo natural (aproximadamente 2.71828)
+    * @param x Valor en formato 64.64 fija.
+    * @return Result Coseno hiperbólico de x en formato 64.64 fija.
+    */
+    function cosh(int128 x) internal pure returns (int128) {
+        // Calcula e^x
+        int128 expx = ABDKMath64x64.exp(x);
+        // Calcula e^{-x}
+        int128 expNegx = ABDKMath64x64.exp(ABDKMath64x64.neg(x));
+        // Suma e^x + e^{-x}
+        int128 sum = ABDKMath64x64.add(expx, expNegx);
+        // Divide por 2
+        return ABDKMath64x64.div(sum, ABDKMath64x64.fromUInt(2));
+    }
+
+    /**
+    * @notice Calcula el logaritmo natural de x.
+    * @param x Valor en formato 64.64 fija.
+    * @return Result Logaritmo natural de x en formato 64.64 fija.
+    */
+    function naturalLog(int128 x) internal pure returns (int128) {
+        return ABDKMath64x64.ln(x);
+    }
+
+    /**
+    * @notice Calcula la raíz cuadrada de x.
+    * @param x Valor en formato 64.64 fija.
+    * @return Result Raíz cuadrada de x en formato 64.64 fija.
+    */
+    function sqrt(int128 x) internal pure returns (int128) {
+        return ABDKMath64x64.sqrt(x);
+    }
+
+
+
+
+
+ /**
+ * Cálculo del drift (u):
+ * 
+ * u = (mu_asset - (sigma^2 / 2)) / t
+ * 
+ * Donde:
+ * mu_asset : Retorno medio del activo subyacente
+ * sigma    : Volatilidad del activo
+ * t        : Tiempo
+ */
+
+
+
 }
