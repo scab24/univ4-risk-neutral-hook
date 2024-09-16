@@ -16,6 +16,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // Importaciones de Chainlink para obtener datos externos
 import "lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
+import {StateLibrary} from "v4-core/libraries/StateLibrary.sol";
+import {PoolIdLibrary} from "v4-core/types/PoolId.sol";
 /**
  * @title GasPriceFeesHook
  * @notice Hook de Uniswap v4 para ajustar dinámicamente las tarifas basadas en el precio del gas y datos de mercado.
@@ -25,6 +27,8 @@ contract GasPriceFeesHook is BaseHook, Ownable {
     using LPFeeLibrary for uint24; // Biblioteca para manejar tarifas de liquidez
     using ABDKMath64x64 for int128;
     using ABDKMath64x64 for uint256;
+    using StateLibrary for IPoolManager;
+    using PoolIdLibrary for PoolKey;
 
     /**
      * @notice Estructura para almacenar datos de mercado obtenidos de oráculos
@@ -197,6 +201,10 @@ contract GasPriceFeesHook is BaseHook, Ownable {
 
         // Validar que el monto especificado no sea cero
         require(params.amountSpecified != 0, "Amount specified cannot be zero");
+
+        //@audit TODO - => gamma
+        // Obtener liquidez desde uniswapV4
+        uint256 liquidity = poolManager.getLiquidity(key.toId());
 
         // Actualizar datos de mercado usando oráculos reales
         updateMarketData(poolAddress);
@@ -539,9 +547,9 @@ function fetchMarketData(address poolAddress) internal view returns (MarketData 
     // No es necesario convertir price, ya es int
 
     //@audit TODO - => gamma
-    // Obtener liquidez desde el oráculo de liquidez de Chainlink
-    (, int256 liquidityPrice, , uint256 liquidityUpdatedAt, ) = liquidityOracle.latestRoundData();
-    uint256 liquidity = uint256(liquidityPrice); // Supuesto: liquidez en tokens (con decimal 18)
+    // Obtener liquidez desde uniswapV4 ====>>> IN BEFORESWAP
+    // uint256 liquidity = poolManager.getLiquidity(key.toId());
+    uint256 liquidity;
 
     //@audit TODO => 
     // Obtener volumen desde el oráculo de volumen de Chainlink
