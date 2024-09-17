@@ -108,6 +108,8 @@ contract univ4riskneutralhook is BaseHook, Ownable {
         bool isBorrowing;
     }
 
+    mapping(address => (mapping LpHedge => LpGreeks)) public hedgeMap;
+
     // Hedge Manager
     HedgeManager hedgeManager;
 
@@ -329,7 +331,7 @@ contract univ4riskneutralhook is BaseHook, Ownable {
         // updateLpGreeks();
 
         // Re-hedge positions accordingly
-        // hedgeManager.modifyHedgePosition();
+        // hedgeManager.modifyHedgePosition(uint256 deltaDifference, uint256 gammaDifference);
 
         // Update the gas price moving average with the gas price of this swap
         updateMovingAverage();
