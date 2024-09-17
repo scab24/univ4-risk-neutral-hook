@@ -9,6 +9,7 @@ import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
 import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/types/BeforeSwapDelta.sol";
+import {HedgeManager} from "v4-hedge/src/HedgeManager.sol";
 
 // OpenZeppelin imports for access control
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -94,6 +95,21 @@ contract univ4riskneutralhook is BaseHook, Ownable {
 
     // Nonce to generate unique swapId and avoid collisions
     uint256 private swapNonce;
+
+    // Re-hedge params
+    struct LpGreeks {
+        int256 delta;
+        int256 gamma;
+    }
+
+    struct LpHedge {
+        bool isHedged;
+        bool isPowerPerp;
+        bool isBorrowing;
+    }
+
+    // Hedge Manager
+    HedgeManager hedgeManager;
 
     /**
      * @notice Constructor that initializes the hook and sets the oracle addresses.
@@ -308,6 +324,12 @@ contract univ4riskneutralhook is BaseHook, Ownable {
 
         // Emit post-swap adjustment event
         // emit SwapAdjusted(poolAddress, adjustment);
+
+        // Adjust LP Greeks
+        // updateLpGreeks();
+
+        // Re-hedge positions accordingly
+        // hedgeManager.modifyHedgePosition();
 
         // Update the gas price moving average with the gas price of this swap
         updateMovingAverage();
@@ -646,6 +668,21 @@ contract univ4riskneutralhook is BaseHook, Ownable {
         return x >= 0 ? x : x.neg();
     }
 
+
+    // TODO: Compute LP Greeks
+    function computeLpGreeks() internal view {
+        // Calculate delta and gamma for LPs
+        // for(uint 256 i=0; i<=L) {
+        // uint256 deltaLp = L*(1/sqrt(p) - 1/sqrt(p_b))
+        // uint256 gammaLp = 0.5*L*p**(-3/2)
+        
+        // Buy 
+
+        // unchecked {
+        //     ++i;
+        // }
+        //}
+    }
 
     ///////////////////
     // Brevis 
