@@ -1,9 +1,11 @@
 # UniswapV4 - Risk Neutral Hook
 
 
-<div style="margin: 20px 0;">
-    <img alt="image" src="UniV4.png" style="width: 100%; height: auto;">
-</div>
+<br>
+
+<img alt="image" src="UniV4.png" style="width: 100%; height: auto;">
+
+<br>
 
 [This is the explanatory video for our Hook](https://youtu.be/_3UwdIoU23w)
 
